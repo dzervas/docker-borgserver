@@ -44,4 +44,5 @@ COPY ./data/init.sh /init.sh
 USER borg
 EXPOSE 2222/tcp
 
+ENTRYPOINT [ "/init.sh" ]
 CMD [ "/usr/sbin/sshd", "-D", "-e" ]
