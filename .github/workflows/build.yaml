@@ -35,6 +35,15 @@ jobs:
           docker pull ghcr.io/${{ github.repository }}:latest || true && \
           echo "digest=$(docker history -q ghcr.io/${{ github.repository }}:latest | head -n 1)" >>$GITHUB_OUTPUT
 
+      - name: Current release version
+        id: current_release_version
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        run: |
+          export TAG=$(docker inspect ghcr.io/${{ github.repository }}:latest --format '{{ range .RepoTags }}{{ $tag := index (split . ":") 1 }}{{ if ne $tag "latest" }}{{ $tag }}{{ end }}{{ end }}')
+          echo "version=${TAG##-*})" >>$GITHUB_OUTPUT
+          echo "build=${TAG##*-}" >>$GITHUB_OUTPUT
+          echo "tag=${TAG}" >>$GITHUB_OUTPUT
+
       - name: Build
         uses: docker/build-push-action@v4
         with:
@@ -50,7 +59,32 @@ jobs:
         id: new_version
         run: echo "digest=$(docker history -q ghcr.io/${{ github.repository }}:latest | head -n 1)" >>$GITHUB_OUTPUT
 
-      - run: echo "current_version=${{ steps.current_version.outputs.digest }} new_version=${{ steps.new_version.outputs.digest }}"
+      - name: Get Borg version
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        id: borg_version
+        run: echo "version=$(docker run --rm --entrypoint borg ghcr.io/${{ github.repository }}:latest -V | cut -d' ' -f2)" >>$GITHUB_OUTPUT
+
+      - name: Bump the build version
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest && steps.current_release_version.outputs.version == steps.borg_version.outputs.version
+        run: echo "RELEASE_VERSION=${{ steps.borg_version.outputs.version }}-$(echo ${{ steps.current_release_version.outputs.build }} | awk '{print $1+1}')" >>$GITHUB_ENV
+
+      - name: Calculate new release version
+        id: new_release_version
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest && steps.current_release_version.outputs.version != steps.borg_version.outputs.version
+        run: echo "RELEASE_VERSION=${{ steps.borg_version.outputs.version }}-0" >>$GITHUB_ENV
+
+      - if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        run: |
+          echo "Old Docker Container Digest: ${{ steps.current_version.outputs.digest }}
+          Old Docker Container Digest: ${{ steps.new_version.outputs.digest }}
+          Borg Version: ${{ steps.borg_version.outputs.version }}
+          Release Version: ${{ env.RELEASE_VERSION }}"
+
+      - name: Create Release
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.RELEASE_VERSION }}
 
       - name: Push
         if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
@@ -60,4 +94,4 @@ jobs:
           cache-to: type=gha,mode=max
           push: true
           sbom: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ env.RELEASE_VERSION }}
