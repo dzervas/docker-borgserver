@@ -2,5 +2,6 @@
 .github
 .gitignore
 .woodpecker.yml
+chart
 Containerfile
 README.md
