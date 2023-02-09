@@ -1,0 +1,72 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: "{{ .Chart.Name }}-statefulset"
+  labels:
+    chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+spec:
+  serviceName: "{{ .Chart.Name }}-service"
+  minReadySeconds: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: "{{ .Chart.Name }}"
+  replicas: {{ .Values.replicaCount | default 1 }}
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: {{ .Chart.Name }}
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+      - name: borgserver
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.Version }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        {{- if eq .Values.service.type "hostPort" }}
+        - containerPort: 2222
+          protocol: TCP
+          name: borg
+        {{- end }}
+        volumeMounts:
+        - name: keys
+          mountPath: /keys
+        - name: repos
+          mountPath: /backup
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 100 }}
+      volumes:
+        - name: keys
+          persistentVolumeClaim:
+            claimName: {{ .Chart.Name }}-keys
+        - name: authorized-keys
+          configMap:
+            name: authorized-keys
+            items:
+              - key: authorized-keys
+                path: authorized-keys
+            defaultMode: 0400
+      {{- if not .Values.persistence.enabled }}
+        - name: repos
+          emptyDir: {}
+      {{- else }}
+      volumeClaimTemplates:
+      - metadata:
+          name: repos
+        spec:
+          accessModes:
+          {{- range .Values.persistence.accessModes }}
+            - {{ . | quote }}
+          {{- end }}
+          resources:
+            requests:
+              storage: {{ .Values.persistence.size | default "10Gi" }}
+          storageClassName: {{ .Values.persistence.storageClass }}
+          volumeMode: {{ .Values.persistence.volumeMode | default "Filesystem" }}
+          volumeName: {{ .Chart.Name }}-repos
+      {{- end }}

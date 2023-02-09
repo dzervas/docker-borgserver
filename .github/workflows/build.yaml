@@ -47,7 +47,7 @@ jobs:
           echo "version=$(echo ${TAG} | cut -d'-' -f1)" >>$GITHUB_OUTPUT && \
           echo "build=$(echo ${TAG} | cut -d'-' -f2)" >>$GITHUB_OUTPUT
 
-      - name: Build
+      - name: Docker Build
         uses: docker/build-push-action@v4
         with:
           cache-from: |
@@ -85,16 +85,35 @@ jobs:
           Release Version: ${{ env.RELEASE_VERSION }}"
 
       - name: Create Release
-        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        if: success() && steps.current_version.outputs.digest != steps.new_version.outputs.digest
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_VERSION }}
 
-      - name: Push
-        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+      - name: Docker Push
+        if: success() && steps.current_version.outputs.digest != steps.new_version.outputs.digest
         uses: docker/build-push-action@v4
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           push: true
           tags: ghcr.io/${{ github.repository }}:latest,ghcr.io/${{ github.repository }}:${{ env.RELEASE_VERSION }}
+
+      - name: Update Chart.yaml
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        run: envsubst < chart/borgserver/Chart.yaml > chart/borgserver/Chart.yaml.out && mv chart/borgserver/Chart.yaml.out chart/borgserver/Chart.yaml
+        env:
+          BORG_VERSION: ${{ steps.borg_version.outputs.version }}
+          CHART_VERSION: ${{ env.RELEASE_VERSION }}
+
+      - name: Install Helm
+        if: steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        uses: azure/setup-helm@v3
+
+      - name: Run chart-releaser
+        if: success() && steps.current_version.outputs.digest != steps.new_version.outputs.digest
+        uses: helm/chart-releaser-action@v1.5.0
+        with:
+          charts_dir: chart
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
