@@ -1,0 +1,46 @@
+# BorgServer on Kubernetes
+image:
+  repository: ghcr.io/dzervas/docker-borgserver
+  # tag: latest
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  port: 2222
+
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 10Gi
+  accessModes:
+  - ReadWriteOnce
+  volumeMode: Filesystem
+
+borg:
+  admin: ""
+  additional_args: "--append-only"
+
+  ## If you mounted your persistent storage somewhere else:
+  #data_dir: /backup
+
+# Add your client pubkeys here:
+clients: []
+#  - name: admin
+#    restrictToPaths:
+#      - /backup/
+#    type: ssh-rsa
+#    key: AAAABfC4LL0S70F9BbnTx3uYJfSVI7b/HAR....
+#  - name: another-client
+#    restrictToPaths:
+#      - /backup/another-client
+#    storageQuota: 10G
+#    appendOnly: true
+#    type: ssh-rsa
+#    key: AAAAB3NzaC1yc2EAAAADAQABAAABAQClJ8m1....
+#  - name: custom-client
+#    overwriteCommand: "borg serve --restrict-to-repository /backup/custom-client --storage-quota 100G"
+#    type: ssh-rsa
+#    key: 3NzaC1yc2E009ASDN4lDAQABAAABAQCl8J1m....
+
+terminationGracePeriodSeconds: 100
