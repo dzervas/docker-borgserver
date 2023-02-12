@@ -37,6 +37,9 @@ spec:
         volumeMounts:
         - name: keys
           mountPath: /keys/host
+          {{- if .Values.borg.useKeysSecret }}
+          readOnly: true
+          {{- end }}
         - name: repos
           mountPath: /backup
         - name: authorized-keys
@@ -44,7 +47,12 @@ spec:
       terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds | default 100 }}
       volumes:
         - name: keys
+          {{- if .Values.borg.useKeysSecret }}
+          secret:
+            secretName: {{ .Values.borg.keysSecretName }}
+          {{- else }}
           emptyDir: {}
+          {{- end }}
         - name: authorized-keys
           configMap:
             name: authorized-keys
