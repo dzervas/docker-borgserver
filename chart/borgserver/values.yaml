@@ -19,6 +19,8 @@ persistence:
 borg:
   admin: ""
   additional_args: ""
+  useKeysSecret: false
+  keysSecretName: borgserver-keys-host
 
   ## If you mounted your persistent storage somewhere else:
   #data_dir: /backup
