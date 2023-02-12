@@ -10,13 +10,13 @@ data:
   authorized-keys: |-
 {{- range $client := $.Values.clients }}
     command="borg serve \
-    {{- range $path := $client.restrictToPaths -}}
+    {{- range $path := $client.restrictToPaths }}
       --restrict-to-path {{ $path }} \
-    {{- end -}}
-    {{- if $client.appendOnly -}}
+    {{- end }}
+    {{- if $client.appendOnly }}
       --append-only \
-    {{- end -}}
-    {{- if $client.storageQuota -}}
-      --storage-quota {{ $client.storageQuota }} \
+    {{- end }}
+    {{- if $client.storageQuota }}
+      --storage-quota {{ $client.storageQuota }}
     {{- end }} {{ $.Values.borg.additional_args }}",restrict {{ $client.type }} {{ $client.key }} {{ $client.name }}
 {{- end }}
