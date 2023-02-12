@@ -3,8 +3,8 @@ AddressFamily any
 ListenAddress 0.0.0.0
 ListenAddress ::
 
-HostKey /keys/ssh_host_rsa_key
-HostKey /keys/ssh_host_ed25519_key
+HostKey /keys/host/ssh_host_rsa_key
+HostKey /keys/host/ssh_host_ed25519_key
 AuthorizedKeysFile /home/borg/.ssh/authorized_keys
 PidFile /tmp/sshd.pid
 

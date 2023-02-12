@@ -17,7 +17,7 @@ echo
 
 # Gather all SSH-Client-Keys to authorized_keys
 echo " * Checking / Preparing SSH Client-Keys..."
-for client in $(ls "${SSH_CLIENT_DIR}/*"); do
+for client in $(ls "${SSH_CLIENT_DIR}"); do
   if [ -f "${SSH_CLIENT_DIR}/${client}" ] ; then
     echo "  ** Appending SSH Client key [${client}] to authorized_keys..."
     cat "${SSH_CLIENT_DIR}/${client}" >> "/home/borg/.ssh/authorized_keys"
@@ -27,4 +27,4 @@ done
 echo "########################################################"
 echo " * Init done! Ready to fire up your borgserver!"
 
-exit 0
+exec "$@"
