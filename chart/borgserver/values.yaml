@@ -11,11 +11,10 @@ service:
 
 persistence:
   enabled: true
-  storageClass: ""
+  # storageClass: local-path
   size: 10Gi
   accessModes:
   - ReadWriteOnce
-  volumeMode: Filesystem
 
 borg:
   admin: ""
